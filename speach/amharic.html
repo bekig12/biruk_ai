@@ -1,0 +1,246 @@
+<!DOCTYPE html> 
+<html lang="en">  
+<head>  
+  <meta charset="UTF-8">  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+  <title>Speech to Text Demo</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>  
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">   
+</head>  
+<body class="bg-black">  
+<div class="flex p-2">
+<div class="spinner-border text-light loader d-none" role="status">
+  <span class="sr-only">Loading...</span>
+</div>
+<div class=" w-fit flex flex-col absolute items-end right-4">
+  <button id="hum" onclick="toogleNav()">
+    <i class="fas fa-bars text-white text-2xl mb-3"></i>
+  </button>
+  <a href="/" class="px-2 py-2 bg-white w-full hidden !no-underline text-black !decoration-0 !text-inherit px-3" onclick="toogleNav()"><span>Amharic</span></a>
+  <a href="/english" class="px-2 py-2 bg-white w-full hidden !no-underline text-black !decoration-0 !border-t-black border-t-1 px-3" onclick="toogleNav()">English</a>
+</div>
+</div>
+
+<div class="w-full h-screen flex items-center justify-center">
+  <img src="/assets/bruk_robot.png" class="max-w-150 w-full">
+  <video src="/assets/bruk_robot_talk.mp4" controls class="max-w-150 w-full pointer-events-none hidden" autoplay loop></video>
+</div>
+<audio id="audioPlayer" controls style="margin-top: 20px; display: block;" class="sr-only"></audio>
+<script>  
+let isSpeaking = false;  
+let recognition = null;  
+let micReady = false;  
+function toogleNav(){
+  document.querySelectorAll("a").forEach(link=>{
+    setTimeout(()=>{
+    link.classList.toggle("hidden")
+    },200)
+  })
+}  
+
+const loader = document.querySelector(".loader");  
+const video = document.querySelector("video");  
+const image = document.querySelector("img");  
+const audioPlayer = document.getElementById("audioPlayer");  
+document.body.addEventListener("click", async() => {  
+    if (micReady) return;  
+    micReady = true;  
+  audioPlayer.setAttribute("src","/assets/startAudio.mp3")
+  audioPlayer.play()
+      audioPlayer.onerror = (e) => {
+            console.error("Audio element error:", e);
+        };
+     audioPlayer.onplay = () => {
+       video.play()
+       setTimeout(()=>{
+                  loader.classList.add("d-none");
+          isSpeaking=true
+            image.classList.add("hidden");
+            video.classList.remove("hidden");
+             
+       },700)
+        };
+     audioPlayer.onended = () => {
+            video.classList.add("hidden");
+            video.pause();
+            image.classList.remove("hidden");
+            isSpeaking=false
+           audioPlayer.removeAttribute("src")
+            initRecognition();
+            startRecognition();
+        };
+}, { once: true });  
+  
+// Text-to-Speech  
+function speakText(text, callback=null) {  
+    const synth = window.speechSynthesis;  
+    const utterance = new SpeechSynthesisUtterance(text);  
+    utterance.lang = "am-ET";  
+    utterance.rate = 0.9;  
+    utterance.pitch = 0.8;  
+  
+    utterance.onstart = () => {
+        isSpeaking = true;  
+        image.classList.add("hidden");  
+        video.classList.remove("hidden");  
+        video.play();  
+        if (recognition) try { recognition.abort(); } catch(e){}  
+    };  
+  
+    utterance.onend = () => {  
+        isSpeaking = false;  
+        video.classList.add("hidden");  
+        video.pause();  
+        image.classList.remove("hidden");  
+        if (callback) callback();  
+    };  
+  
+    synth.speak(utterance);  
+}  
+  
+// Initialize browser ASR  
+function initRecognition() {  
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;  
+    if (!SR) return console.log("SpeechRecognition not supported");  
+  
+    recognition = new SR();  
+    recognition.lang = "am-ET";  
+    recognition.continuous = true;       // continuous listening  
+    recognition.interimResults = false;  
+  
+    recognition.onresult = async (evt) => {
+    try {
+        if (isSpeaking) return;
+        // 1️⃣ Extract recognized text safely
+        let text = "";
+        try {
+            text = evt.results[evt.results.length - 1][0].transcript.trim();
+        } catch (e) {
+            console.warn("Could not extract transcript:", e);
+            return;
+        }
+        if (!text) {
+            console.warn("Empty speech received.");
+            return;
+        }
+        loader.classList.remove("d-none");
+        console.log("User said:", text);
+        isSpeaking=true
+        // 2️⃣ Send text to backend
+        let res;
+        try {
+            res = await fetch("/askAmharic", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text })
+            });
+        } catch (e) {
+            console.error("Network error:", e);
+            startRecognition(); // restart listening
+            return;
+        }
+
+        // 3️⃣ Handle non-OK responses
+        if (!res.ok) {
+            console.error("Backend responded with error:", res.status, res.statusText);
+            try {
+                const errJson = await res.json();
+                console.error("Backend error message:", errJson.error);
+            } catch {
+                console.error("Backend returned non-JSON error.");
+            }
+            isSpeaking=false
+            startRecognition();
+            return;
+        }
+
+        // 4️⃣ Play audio (with error catching)
+        try {
+            await playAudioBlob(res);
+        } catch (e) {
+            console.error("Audio playback failed:", e);
+            startRecognition();
+        }
+        
+       } catch (err) {
+        // Final catch-all safeguard
+        console.error("Recognition handler crashed:", err);
+        startRecognition();
+    }
+};  
+  
+    recognition.onerror = (e) => console.log("STT Error:", e.error);  
+    
+    recognition.onend = () => {
+    if (!isSpeaking) {
+        console.log("Recognition ended automatically… restarting");
+        setTimeout(()=>{
+        startRecognition();
+        },700)
+    }
+};
+}  
+  
+// Start recognition safely  
+  function startRecognition() {
+    if (!recognition || isSpeaking) return;
+    try {
+        recognition.start();
+    } catch (e) {
+        console.warn("Restart failed, retrying...", e);
+        setTimeout(() => startRecognition(), 500);
+    }
+}  
+
+  async function getAudio(){
+    let res;
+        try {
+    console.log("sent","ሰላም እኔ ብሩክ ግርማ ነኝ። የ12ኛ ክፍል የተጥሮ ሳይንስ ተማር ስሆን የተለያዩ ፈጠራዎችን በመስራት እታወቃለሁ። ዛሬ ምን ልረዳዎት እችላለሁ ?")     
+    res = await fetch("http://localhost:3000/generateAudio", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text:"ሰላም እኔ ብሩክ ግርማ ነኝ። ዛሬ ምን ልረዳዎት እችላለሁ ?" })
+            });
+    playAudioBlob(res)
+        } catch (e) {
+            console.error("Network error:", e);
+            startRecognition(); // restart listening
+            return;
+        }
+  }
+  
+  async function playAudioBlob(res) {
+    try {
+        const audioBlob = await res.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        audioPlayer.src = audioUrl;
+        
+        audioPlayer.onerror = (e) => {
+            console.error("Audio element error:", e);
+        };
+
+        audioPlayer.onplay = () => {
+          loader.classList.add("d-none");
+          isSpeaking=true
+            image.classList.add("hidden");
+            video.classList.remove("hidden");
+            video.play();
+        };
+
+        audioPlayer.onended = () => {
+            video.classList.add("hidden");
+            video.pause();
+            image.classList.remove("hidden");
+            isSpeaking=false
+            startRecognition();
+        };
+        audioPlayer.play();
+    } catch (err) {
+        console.error("playAudioBlob failed:", err);
+        startRecognition();
+    }
+}
+</script>
+</body>  
+  </html>
