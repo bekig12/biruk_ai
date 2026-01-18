@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voice AI Assistant</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+</head>
+<body class="min-h-screen bg-gradient-to-br from-sky-100 to-indigo-200 flex items-center justify-center">
+
+  <!-- NAVBAR -->
+  <nav class="fixed top-0 left-0 w-full bg-white shadow-md z-50">
+    <div class="max-w-2xl mx-auto flex justify-between items-center p-4">
+      <div class="text-xl font-bold text-gray-800">Biruk AI</div>
+      <div class="space-x-4">
+        <a href="/amharic" class="text-gray-800 hover:text-sky-500 font-semibold">Amharic</a>
+        <a href="/english" class="text-gray-800 hover:text-sky-500 font-semibold">English</a>
+        <a href="/text" class="text-gray-800 hover:text-sky-500 font-semibold">Text</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN CARD -->
+  <div class="w-full max-w-2xl bg-white rounded-2xl shadow-xl p-6 space-y-6 mt-24">
+    <h1 class="text-2xl font-bold text-center text-gray-800">🎤 Voice AI Assistant</h1>
+
+    <!-- Display Box -->
+    <div class="border rounded-xl p-4 min-h-[120px] bg-gray-50">
+      <p class="text-sm text-gray-500">AI Response</p>
+      <p id="result" class="mt-2 text-gray-800"></p>
+    </div>
+
+    <!-- Status -->
+    <p id="status" class="text-center text-sm text-gray-500">Idle</p>
+
+    <!-- Button -->
+    <div class="flex justify-center">
+      <button id="toggleBtn" class="px-8 py-3 rounded-full bg-sky-500 text-white font-semibold hover:bg-sky-600 transition">
+        Start Listening
+      </button>
+    </div>
+  </div>
+
+
+<script>
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    alert('Speech Recognition is not supported in this browser. Use Chrome.');
+  }
+
+  const recognition = new SpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = 'en-US';
+
+  const toggleBtn = document.getElementById('toggleBtn');
+  const resultBox = document.getElementById('result');
+  const status = document.getElementById('status');
+
+  let listening = false;
+  let finalTranscript = '';
+  let silenceTimer;
+
+  function resetSilenceTimer() {
+    clearTimeout(silenceTimer);
+    silenceTimer = setTimeout(() => {
+      stopListeningAndSend();
+    }, 2000); // auto-stop after 2s silence
+  }
+
+  recognition.onresult = (event) => {
+    let interim = '';
+    console.log("hi")
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const transcript = event.results[i][0].transcript;
+      if (event.results[i].isFinal) {
+        finalTranscript += transcript + ' ';
+      } else {
+        interim += transcript;
+      }
+    }
+    status.textContent = 'Listening...';
+    resetSilenceTimer();
+  };
+
+  recognition.onerror = (e) => {
+    status.textContent = 'Error: ' + e.error;
+  };
+
+  recognition.onend = () => {
+    if (listening) recognition.start();
+  };
+
+  async function stopListeningAndSend() {
+    listening = false;
+    recognition.stop();
+    toggleBtn.textContent = 'Start Listening';
+    status.textContent = 'Processing...';
+
+    const question = finalTranscript.trim();
+    finalTranscript = '';
+
+    if (!question) {
+      status.textContent = 'No speech detected';
+      return;
+    }
+
+    try {
+        console.log(JSON.stringify({ question }))
+      const res = await fetch('https://biruk-ai.onrender.com/askAmharicText', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text:question })
+      });
+
+      const data = await res.json();
+      resultBox.textContent = data.ans || JSON.stringify(data);
+      status.textContent = 'Done';
+    } catch (err) {
+      resultBox.textContent = 'Error contacting AI server';
+      status.textContent = 'Error';
+    }
+  }
+
+  toggleBtn.onclick = () => {
+    if (!listening) {
+      listening = true;
+      finalTranscript = '';
+      recognition.start();
+      toggleBtn.textContent = 'Stop Listening';
+      status.textContent = 'Listening...';
+    } else {
+      stopListeningAndSend();
+    }
+  };
+</script>
+
+</body>
+</html>
