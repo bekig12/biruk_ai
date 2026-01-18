@@ -14,15 +14,17 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Static files
-app.use(express.static(path.join(__dirname, "assets")));
-app.use(express.static(path.join(__dirname)));
-
-// Serve frontend
 app.get("/", (req, res) => {
+res.sendFile(path.join(__dirname, "speach/amharic.html"));
+});
+app.get("/amharic", (req, res) => {
 res.sendFile(path.join(__dirname, "speach/amharic.html"));
 });
 app.get("/english", (req, res) => {
 res.sendFile(path.join(__dirname, "speach/english.html"));
+});
+app.get("/text", (req, res) => {
+res.sendFile(path.join(__dirname, "speach/text.html"));
 });
 
 const CAMB_API_KEY = process.env.CAMB_API_KEY
