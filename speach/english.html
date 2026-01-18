@@ -1,171 +1,348 @@
 <!DOCTYPE html> 
+
 <html lang="en">  
+
 <head>  
+
   <meta charset="UTF-8">  
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+
   <title>Speech to Text Demo</title>    <!-- Tailwind CDN -->   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>  
+
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
   </head>  
+
   <body class="bg-black">    
+
 <div class="flex p-2">
+
 <div class="spinner-border text-light loader d-none" role="status">
+
   <span class="sr-only">Loading...</span>
+
 </div>
-<div class=" w-fit flex flex-col absolute items-end right-4">
-  <button id="hum" onclick="toogleNav()">
-    <i class="fas fa-bars text-white text-2xl mb-3"></i>
-  </button>
-  <a href="/" class="px-2 py-2 bg-white w-full hidden" onclick="toogleNav()">Amharic</a>
-  <a href="/english" class="px-2 py-2 bg-white border-t border-t-black w-full hidden" onclick="toogleNav()">English</a>
-</div>
-</div>
-  <div class="w-full h-screen flex items-center justify-center">
-    <img src="/assets/bruk_robot.png" class="max-w-150 w-full">
-    <video src="/assets/bruk_robot_talk.mp4" controls class="max-w-150 w-full pointer-events-none hidden" autoplay loop></video>
-    <div class="absolute top-0 left-0 flex items-center justify-center h-screen w-screen bg-black/50 hidden">
-      
-      <h1 class="bg-white py-4 px-4 rounded-lg">Agree to our Terms Services 
-      <button id="agreebtn" class="py-2 px-5 bg-blue-500 text-white rounded-lg ml-2">Ok</button>
-      </h1>
+
+<nav class="fixed top-0 left-0 w-full bg-white shadow-md z-50">
+
+    <div class="max-w-2xl mx-auto flex justify-between items-center p-4">
+
+      <div class="text-xl font-bold text-gray-800">Biruk AI</div>
+
+      <div class="space-x-4">
+
+        <a href="/amharic" class="text-gray-800 hover:text-sky-500 font-semibold">Amharic</a>
+
+        <a href="/english" class="text-gray-800 hover:text-sky-500 font-semibold">English</a>
+
+        <a href="/text" class="text-gray-800 hover:text-sky-500 font-semibold">Text</a>
+
+      </div>
+
     </div>
+
+  </nav>
+
+</div>
+
+  <div class="w-full h-screen flex items-center justify-center">
+
+    <img src="/assets/bruk_robot.png" class="max-w-150 w-full">
+
+    <video src="/assets/bruk_robot_talk.mp4" controls class="max-w-150 w-full pointer-events-none hidden" autoplay loop></video>
+
+    <div class="absolute top-0 left-0 flex items-center justify-center h-screen w-screen bg-black/50 hidden">
+
+      
+
+      <h1 class="bg-white py-4 px-4 rounded-lg">Agree to our Terms Services 
+
+      <button id="agreebtn" class="py-2 px-5 bg-blue-500 text-white rounded-lg ml-2">Ok</button>
+
+      </h1>
+
+    </div>
+
   </div>
+
   
+
 <script>
+
   let isSpeaking = false;
+
 let recognition = null;
+
 const loader = document.querySelector(".loader");
+
 const video = document.querySelector("video");
+
 const image = document.querySelector("img");
+
 function toogleNav(){
+
   document.querySelectorAll("a").forEach(link=>{
+
     setTimeout(()=>{
+
     link.classList.toggle("hidden")
+
     },200)
+
   })
+
 }  
+
 // ============================================
+
 // START SYSTEM ON FIRST USER INTERACTION
+
 // ============================================
+
 document.body.addEventListener("click", () => {
+
   const message = `
+
   Hi, my name is Bruki Girma.
+
     I am a 12th grade natural science student.
+
     What can I help you with today?`;
+
     video.play()
+
     setTimeout(()=>{
+
       speakText(message, () => startSystem())
+
       },800)
+
     
+
 }, { once: true });
 
+
+
 // ============================================
+
 // TEXT TO SPEECH FUNCTION
+
 // Handles video / image switching
+
 // ============================================
+
 function speakText(text, onEndCallback = null) {
+
     const synth = window.speechSynthesis;
+
     const utterance = new SpeechSynthesisUtterance(text);
 
+
+
     const voices = synth.getVoices();
+
     const preferredVoice = voices.find(v =>
+
         v.name.includes("Google US English") || v.name.includes("Samantha")
+
     );
+
     if (preferredVoice) utterance.voice = preferredVoice;
 
+
+
     utterance.rate = 1.1;
+
     utterance.pitch = 1.0;
 
+
+
     // When AI begins talking
+
     utterance.onstart = () => {
+
         isSpeaking = true;
 
+
+
         // Toggle visuals
+
         image.classList.add("hidden");
+
         video.classList.remove("hidden");
+
         video.play();
 
+
+
         // Stop listening while talking
+
         if (recognition) recognition.stop();
+
     };
 
+
+
     // When AI finishes
+
     utterance.onend = () => {
+
         isSpeaking = false;
+
         loader.classList.add("d-none");
+
         // Toggle visuals back
+
         video.classList.add("hidden");
+
         video.pause();
+
         image.classList.remove("hidden");
+
+
 
         if (onEndCallback) onEndCallback();
 
+
+
         // Restart listening AFTER talking
+
         if (recognition) recognition.start();
+
     };
 
+
+
     synth.speak(utterance);
+
 }
 
+
+
 // ============================================
+
 // START SPEECH RECOGNITION SYSTEM
+
 // ============================================
+
 function startSystem() {
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
+
+
     if (!SpeechRecognition) {
+
         console.log("SpeechRecognition not supported");
+
         return;
+
     }
 
+
+
     recognition = new SpeechRecognition();
+
     recognition.lang = "en-US";
+
     recognition.continuous = false;
+
     recognition.interimResults = false;
 
+
+
     // When user finishes speaking
+
     recognition.onresult = async (evt) => {
+
       loader.classList.remove("d-none");
+
         const lastIndex = evt.results.length - 1;
+
         const text = evt.results[lastIndex][0].transcript.trim();
+
         console.log("User said:", text);
+
       isSpeaking=true;
+
         // Send to AI
+
         try {
+
             const aiAnswer = await fetch("/askEnglish", {
+
                 method: "POST",
+
                 headers: { "Content-Type": "application/json" },
+
                 body: JSON.stringify({ question: text })
+
             });
+
+
 
             const answer = await aiAnswer.json();
 
+
+
             // AI speaking
+
            video.play()
+
            setTimeout(()=>{
+
             speakText(answer.answer);
+
              },300)
+
+
 
             console.log("AI:", answer.answer);
 
+
+
         } catch (err) {
+
             console.log("Error fetching AI:", err);
+
         }
+
     };
+
+
 
     // When recognition stops naturally → restart ONLY if AI is not speaking
+
     recognition.onend = () => {
+
         if (!isSpeaking) {
+
             console.log("Restarting recognition...");
+
             recognition.start();
+
         }
+
     };
+
+
 
     recognition.onerror = (e) => {
+
         console.log("Recognition error:", e.error);
+
     };
 
+
+
     // Start listening
+
 }
+
 </script> 
+
   </body>  
+
 </html>  
+
