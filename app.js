@@ -14,6 +14,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Static files
+app.use(express.static(path.join(__dirname, "assets")));
+
+app.use(express.static(path.join(__dirname)));
+
 app.get("/", (req, res) => {
 res.sendFile(path.join(__dirname, "speach/amharic.html"));
 });
