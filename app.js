@@ -225,6 +225,39 @@ return res.status(500).json({ error: err.message });
 }
 });
 
+// amharic text only route
+app.post("/askAmharicText", async (req, res) => {
+try {
+const { text } = req.body;
+if (!text) return res.status(400).json({ error: "No text provided" });
+
+const english = await translate(text, 3, 1);  
+
+const aiRes = await fetch(  
+  "https://api.groq.com/openai/v1/chat/completions",  
+  {  
+    method: "POST",  
+    headers: {  
+      "Content-Type": "application/json",  
+      Authorization: `Bearer ${GROQ_API_KEY}`,  
+    },  
+    body: JSON.stringify({  
+      model: "llama-3.1-8b-instant",  
+      messages: [{ role: "user", content: english }],  
+    }),  
+  }  
+).then((r) => r.json());  
+
+const englishAnswer = aiRes.choices[0].message.content;  
+const amharic = await translate(englishAnswer, 1, 3);  
+
+res.json({ans:amharic})
+
+} catch (err) {
+console.error("ERROR:", err);
+return res.status(500).json({ error: err.message });
+}
+});
 
 // Render uses PORT env variable
 const PORT = process.env.PORT || 3000;
