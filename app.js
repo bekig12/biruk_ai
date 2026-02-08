@@ -3,8 +3,8 @@ import cors from "cors";
 import fetch from "node-fetch";
 import path from "path";
 import { fileURLToPath } from "url";
-const formidable = import("formidable");
-const fs = import("fs");
+import { formidable } from "formidable";
+import fs from "fs";
 
 
 // TTS helper
