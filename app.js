@@ -302,7 +302,9 @@ app.post("/changeAudio", (req, res) => {
     }
     const AUDIO_DIR = path.join(process.cwd(), "assets");
 
-const AUDIO_NAME = fields.name;
+const AUDIO_NAME = Array.isArray(fields.name)
+  ? fields.name[0]
+  : fields.name;
 const AUDIO_PATH = path.join(AUDIO_DIR, AUDIO_NAME);
 // make sure folder exists
 fs.mkdirSync(AUDIO_DIR, { recursive: true });
