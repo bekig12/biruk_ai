@@ -1,348 +1,354 @@
-<!DOCTYPE html> 
-
-<html lang="en">  
-
-<head>  
-
-  <meta charset="UTF-8">  
-
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">  
-
-  <title>Speech to Text Demo</title>    <!-- Tailwind CDN -->   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>  
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Speech to Text Demo</title>
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-
-  </head>  
-
-  <body class="bg-black">    
+  <style>
+    /* Smooth fade-in/out for stop button */
+    #stopBtn {
+      transition: all 0.3s ease-in-out;
+      opacity: 0;
+    }
+    #stopBtn.show {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body class="bg-black">
 
 <div class="flex p-2">
+  <div class="spinner-border text-light loader d-none" role="status">
+    <span class="sr-only">Loading...</span>
+  </div>
 
-<div class="spinner-border text-light loader d-none" role="status">
-
-  <span class="sr-only">Loading...</span>
-
+  <div class="absolute top-3 right-4 z-50 menu-container">
+    <button id="hamburger" class="text-3xl hover:text-blue-400 text-white">☰</button>
+    <div id="menuLinks" class="flex flex-col mt-2 gap-1 hidden">
+      <a href="/english" id="btnEn" class="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded text-sm">English</a>
+      <a href="/" id="btnAm" class="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded text-sm">Amharic</a>
+      <a href="/englishTxt" id="btnEn" class="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded text-sm">English T</a>
+      <a href="/amharicTxt" id="btnAm" class="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded text-sm">Amharic T</a> 
+      <a href="/haddiyisaT" id="btnEn" class="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded text-sm">Haddiyisa T</a>
+      <a href="/haddiyisa" id="btnAm" class="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded text-sm">Haddiyisa</a>      
+      <button id="btnEditor" class="bg-blue-600 hover:bg-blue-500 px-3 py-2 rounded text-sm">Editor</button>
+    </div>
+  </div>
 </div>
 
-<nav class="fixed top-0 left-0 w-full bg-white shadow-md z-50">
+<div class="w-full h-screen flex items-center justify-center">
+  <img src="/assets/bruk_robot.png" class="max-w-150 w-full">
+  <video src="/assets/bruk_robot_talk.mp4" controls class="max-w-150 w-full pointer-events-none hidden" autoplay loop></video>
 
-    <div class="max-w-2xl mx-auto flex justify-between items-center p-4">
+  <div class="absolute top-0 left-0 flex items-center justify-center h-screen w-screen bg-black/50 hidden">
+    <h1 class="bg-white py-4 px-4 rounded-lg">Agree to our Terms Services 
+      <button id="agreebtn" class="py-2 px-5 bg-blue-500 text-white rounded-lg ml-2">Ok</button>
+    </h1>
+  </div>
+</div>
 
-      <div class="text-xl font-bold text-gray-800">Biruk AI</div>
+<!-- Editor & Uploads (your existing code remains unchanged) -->
+<div id="editorPage" class="absolute top-0 z-1000 page hidden bg-slate-950 text-slate-100 overflow-y-auto pb-20">
+  
 
-      <div class="space-x-4">
+  <div id="passwordSection" class="flex items-center justify-center min-h-screen p-6">
+    <div class="bg-slate-900 border border-slate-800 p-8 rounded-2xl w-full max-w-md shadow-2xl">
+      <div class="flex justify-center mb-4"><i class="fas fa-terminal text-blue-500 text-4xl"></i></div>
+      <h2 class="text-xl font-bold mb-6 text-center tracking-tight">System Authentication</h2>
+      <input id="passwordInput" type="password" class="w-full p-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-blue-500 outline-none mb-4" placeholder="Enter Admin Password">
+      <button onclick="checkPassword()" class="w-full py-3 bg-blue-600 hover:bg-blue-500 rounded-lg font-bold cursor-pointer">Enter Dashboard</button>
+      <p id="errorMsg" class="text-red-400 hidden mt-4 text-center text-sm">Invalid Credentials</p>
+    </div>
+  </div>
 
-        <a href="/amharic" class="text-gray-800 hover:text-sky-500 font-semibold">Amharic</a>
+  <div id="editorSection" class="hidden max-w-6xl mx-auto p-6 mt-12">
 
-        <a href="/english" class="text-gray-800 hover:text-sky-500 font-semibold">English</a>
+  <!-- Header -->
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
+    <div>
+      <h1 class="text-3xl font-bold text-white tracking-tighter uppercase">
+        Bruk AI <span class="text-blue-500 italic">Admin</span>
+      </h1>
+      <p class="text-slate-500 text-sm font-mono mt-1">> configure_system_assets --v2.0</p>
+    </div>
+  </div>
 
-        <a href="/text" class="text-gray-800 hover:text-sky-500 font-semibold">Text</a>
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+    <!-- Left Column: Greeting + Uploads -->
+    <div class="lg:col-span-2 space-y-6">
+
+      <!-- Core Greeting Message -->
+      <form action="https://biruk-ai.onrender.com/saveEngIntro" method="POST" id="greetingForm" class="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-sm">
+        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">Core Greeting Message</label>
+        <textarea name="text" id="greetingText" class="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 focus:border-blue-600 outline-none min-h-[160px] font-mono text-sm text-blue-100 leading-relaxed" placeholder="Initialize system greeting..."></textarea>
+        <button type="submit" class="mt-4 px-6 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg font-bold cursor-pointer">
+          <i class="fas fa-save"></i> Save Greeting
+        </button>
+      </form>
+
+      <!-- Robot UI, Voice Data, Bot MP4 -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+        <!-- Robot UI -->
+        <form id="robotUIForm" class="bg-slate-900 p-5 rounded-2xl border border-slate-800 text-center" onsubmit="saveRobotUI(event)">
+          <i class="fas fa-camera text-blue-500 mb-3 text-xl"></i>
+          <p class="text-[10px] font-bold text-slate-400 uppercase mb-4">Robot UI</p>
+          <label class="block w-full py-2 bg-slate-800 hover:bg-blue-900/30 border border-slate-700 rounded-lg cursor-pointer text-xs font-bold transition-all">
+            <input type="file" class="hidden" accept="image/*" onchange="previewMedia(this, 'img')">
+            Select Image
+          </label>
+          <button type="submit" class="mt-3 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg font-bold cursor-pointer">
+            <i class="fas fa-save"></i> Save Image
+          </button>
+        </form>
+
+        <!-- Voice Data -->
+        <form action="https://biruk-ai.onrender.com/changeAudio" method="POST" enctype="multipart/form-data" id="voiceForm" class="bg-slate-900 p-5 rounded-2xl border border-slate-800 text-center">
+          <i class="fas fa-waveform text-purple-500 mb-3 text-xl"></i>
+          <p class="text-[10px] font-bold text-slate-400 uppercase mb-4">Voice Data</p>
+          <label class="block w-full py-2 bg-slate-800 hover:bg-purple-900/30 border border-slate-700 rounded-lg cursor-pointer text-xs font-bold transition-all">
+            <input type="file" class="sr-only" accept="audio/*"
+            name="audio"
+            required>
+            Select Audio
+          </label>
+          <input type="text" name="name" value="AmhstartAudio.mp3"required=""/>
+          <button type="submit" class="mt-3 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg font-bold cursor-pointer">
+            <i class="fas fa-save"></i> Save Audio
+          </button>
+        </form>
+
+        <!-- Bot MP4 -->
+        <form id="videoForm" class="bg-slate-900 p-5 rounded-2xl border border-slate-800 text-center" onsubmit="saveVideo(event)">
+          <i class="fas fa-film text-red-500 mb-3 text-xl"></i>
+          <p class="text-[10px] font-bold text-slate-400 uppercase mb-4">Bot MP4</p>
+          <label class="block w-full py-2 bg-slate-800 hover:bg-red-900/30 border border-slate-700 rounded-lg cursor-pointer text-xs font-bold transition-all">
+            <input type="file" class="hidden" accept="video/mp4" onchange="previewMedia(this, 'video')">
+            Select Video
+          </label>
+          <button type="submit" class="mt-3 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg font-bold cursor-pointer">
+            <i class="fas fa-save"></i> Save Video
+          </button>
+        </form>
 
       </div>
-
     </div>
 
-  </nav>
+    <!-- Right Column: Live Assets Preview -->
+    <div class="space-y-6">
+      <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 sticky top-6">
+        <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-6">Live Assets Preview</h3>
 
-</div>
+        <div class="space-y-6">
+          <div>
+            <p class="text-[10px] text-slate-500 mb-2 font-mono">/active_video.mp4</p>
+            <div class="aspect-video bg-black rounded-lg overflow-hidden border border-slate-800 shadow-2xl">
+              <video id="editorVideoPreview" class="w-full h-full object-cover" controls>
+                <source src="beki_robot_talk.mp4" type="video/mp4">
+              </video>
+            </div>
+          </div>
 
-  <div class="w-full h-screen flex items-center justify-center">
+          <div>
+            <p class="text-[10px] text-slate-500 mb-2 font-mono">/active_robot.png</p>
+            <div class="h-32 bg-black rounded-lg overflow-hidden border border-slate-800 flex items-center justify-center p-2">
+              <img id="editorImagePreview" src="/assets/bruk_robot.png" class="max-h-full object-contain">
+            </div>
+          </div>
 
-    <img src="/assets/bruk_robot.png" class="max-w-150 w-full">
-
-    <video src="/assets/bruk_robot_talk.mp4" controls class="max-w-150 w-full pointer-events-none hidden" autoplay loop></video>
-
-    <div class="absolute top-0 left-0 flex items-center justify-center h-screen w-screen bg-black/50 hidden">
-
-      
-
-      <h1 class="bg-white py-4 px-4 rounded-lg">Agree to our Terms Services 
-
-      <button id="agreebtn" class="py-2 px-5 bg-blue-500 text-white rounded-lg ml-2">Ok</button>
-
-      </h1>
-
+          <div>
+            <p class="text-[10px] text-slate-500 mb-2 font-mono">/active_voice.wav</p>
+            <audio id="editorAudioPreview" class="w-full h-10" controls></audio>
+          </div>
+        </div>
+      </div>
     </div>
 
   </div>
+</div>
 
-  
+</div>
+
+<!-- ================== STOP BUTTON ================== -->
+<button id="stopBtn" class="fixed bottom-6 right-6 px-4 py-2 bg-red-600 text-white rounded-lg shadow-lg hidden z-50 hover:bg-red-700">
+  <i class="fas fa-stop"></i> Stop & Listen
+</button>
 
 <script>
-
-  let isSpeaking = false;
-
+let isSpeaking = false;
 let recognition = null;
-
 const loader = document.querySelector(".loader");
-
 const video = document.querySelector("video");
-
 const image = document.querySelector("img");
+const stopBtn = document.getElementById("stopBtn");
 
-function toogleNav(){
+/* ================= PAGE ROUTING ================= */
+const editorPage  = document.getElementById("editorPage");
+const menuLinks = document.getElementById("menuLinks");
+const hamburger = document.getElementById("hamburger");
 
-  document.querySelectorAll("a").forEach(link=>{
+function switchPage(target) {
+    [editorPage].forEach(p => p.classList.add("hidden"));
+    target.classList.remove("hidden");
+    if(target !== editorPage) target.classList.add("flex");
+    menuLinks.classList.add("hidden");
+    hamburger.classList.remove("hidden");
+}
+document.getElementById("btnEditor").onclick = () => switchPage(editorPage);
 
-    setTimeout(()=>{
+hamburger.onclick = (e) => {
+    e.stopPropagation();
+    menuLinks.classList.toggle("hidden");
+    hamburger.classList.toggle("hidden");
+};
 
-    link.classList.toggle("hidden")
+/* ================= EDITOR LOGIC ================= */
+const PASSWORD = "1234";
+let message ;
+function checkPassword() {
+  const input = document.getElementById("passwordInput");
+  if (input.value === PASSWORD) {
+    document.getElementById("passwordSection").classList.add("hidden");
+    document.getElementById("editorSection").classList.remove("hidden");
+    document.getElementById("greetingText").value = message;
+  } else {
+    document.getElementById("errorMsg").classList.remove("hidden");
+  }
+}
 
-    },200)
+/* ================= MULTI-MEDIA UPLOAD HANDLER ================= */
+function previewMedia(input, type) {
+    const file = input.files[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
 
-  })
+    if (type === 'video') {
+        const player = document.getElementById('editorVideoPreview');
+        player.src = url;
+        player.load();
+        player.play();
+    } 
+    else if (type === 'img') {
+        document.getElementById('editorImagePreview').src = url;
+        document.getElementById('mainBotImgEn').src = url;
+        document.getElementById('mainBotImgAm').src = url;
+    } 
+    else if (type === 'audio') {
+        const audio = document.getElementById('editorAudioPreview');
+        audio.src = url;
+        audio.play();
+    }
+}
 
-}  
-
-// ============================================
-
-// START SYSTEM ON FIRST USER INTERACTION
-
-// ============================================
-
-document.body.addEventListener("click", () => {
-
-  const message = `
-
-  Hi, my name is Bruki Girma.
-
-    I am a 12th grade natural science student.
-
-    What can I help you with today?`;
-
-    video.play()
-
-    setTimeout(()=>{
-
-      speakText(message, () => startSystem())
-
-      },800)
-
-    
-
-}, { once: true });
-
-
-
-// ============================================
-
-// TEXT TO SPEECH FUNCTION
-
-// Handles video / image switching
-
-// ============================================
-
+/* ==================== TEXT TO SPEECH ==================== */
 function speakText(text, onEndCallback = null) {
-
     const synth = window.speechSynthesis;
-
     const utterance = new SpeechSynthesisUtterance(text);
-
-
-
     const voices = synth.getVoices();
-
-    const preferredVoice = voices.find(v =>
-
-        v.name.includes("Google US English") || v.name.includes("Samantha")
-
-    );
-
+    const preferredVoice = voices.find(v => v.name.includes("Google US English") || v.name.includes("Samantha"));
     if (preferredVoice) utterance.voice = preferredVoice;
-
-
-
     utterance.rate = 1.1;
-
     utterance.pitch = 1.0;
 
-
-
-    // When AI begins talking
-
     utterance.onstart = () => {
-
         isSpeaking = true;
-
-
-
-        // Toggle visuals
-
         image.classList.add("hidden");
-
         video.classList.remove("hidden");
-
         video.play();
-
-
-
-        // Stop listening while talking
+        stopBtn.classList.add("show"); // show stop button
+        stopBtn.classList.remove("hidden");
 
         if (recognition) recognition.stop();
-
     };
-
-
-
-    // When AI finishes
 
     utterance.onend = () => {
-
         isSpeaking = false;
-
         loader.classList.add("d-none");
-
-        // Toggle visuals back
-
         video.classList.add("hidden");
-
         video.pause();
-
         image.classList.remove("hidden");
 
-
+        stopBtn.classList.remove("show"); // hide button with fade
+        stopBtn.classList.add("hidden");
 
         if (onEndCallback) onEndCallback();
-
-
-
-        // Restart listening AFTER talking
-
         if (recognition) recognition.start();
-
     };
-
-
 
     synth.speak(utterance);
-
 }
 
-
-
-// ============================================
-
-// START SPEECH RECOGNITION SYSTEM
-
-// ============================================
-
+/* ==================== SPEECH RECOGNITION ==================== */
 function startSystem() {
-
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-
-
-    if (!SpeechRecognition) {
-
-        console.log("SpeechRecognition not supported");
-
-        return;
-
-    }
-
-
+    if (!SpeechRecognition) return console.log("SpeechRecognition not supported");
 
     recognition = new SpeechRecognition();
-
     recognition.lang = "en-US";
-
     recognition.continuous = false;
-
     recognition.interimResults = false;
 
-
-
-    // When user finishes speaking
-
     recognition.onresult = async (evt) => {
-
-      loader.classList.remove("d-none");
-
+        loader.classList.remove("d-none");
         const lastIndex = evt.results.length - 1;
-
         const text = evt.results[lastIndex][0].transcript.trim();
-
         console.log("User said:", text);
-
-      isSpeaking=true;
-
-        // Send to AI
+        isSpeaking = true;
 
         try {
-
-            const aiAnswer = await fetch("/askEnglish", {
-
+            const aiAnswer = await fetch("https://biruk-ai.onrender.com/askEnglish", {
                 method: "POST",
-
                 headers: { "Content-Type": "application/json" },
-
                 body: JSON.stringify({ question: text })
-
             });
-
-
-
             const answer = await aiAnswer.json();
-
-
-
-            // AI speaking
-
-           video.play()
-
-           setTimeout(()=>{
-
-            speakText(answer.answer);
-
-             },300)
-
-
-
+            video.play();
+            setTimeout(()=> speakText(answer.answer), 300);
             console.log("AI:", answer.answer);
-
-
-
         } catch (err) {
-
             console.log("Error fetching AI:", err);
-
         }
-
     };
-
-
-
-    // When recognition stops naturally → restart ONLY if AI is not speaking
 
     recognition.onend = () => {
-
-        if (!isSpeaking) {
-
-            console.log("Restarting recognition...");
-
-            recognition.start();
-
-        }
-
+        if (!isSpeaking) recognition.start();
     };
 
-
-
-    recognition.onerror = (e) => {
-
-        console.log("Recognition error:", e.error);
-
-    };
-
-
-
-    // Start listening
-
+    recognition.onerror = (e) => console.log("Recognition error:", e.error);
 }
 
-</script> 
+/* ==================== STOP BUTTON LOGIC ==================== */
+stopBtn.addEventListener("click", () => {
+    if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
+    stopBtn.classList.remove("show");
+    stopBtn.classList.add("hidden");
 
-  </body>  
+    video.classList.add("hidden");
+    video.pause();
+    image.classList.remove("hidden");
 
-</html>  
+    if (recognition) recognition.start();
+});
 
+/* ==================== START SYSTEM ON FIRST CLICK ==================== */
+document.body.addEventListener("click", () => {
+    video.play();
+    setTimeout(()=>{
+      speakText(message, () => startSystem());
+    }, 800);
+}, { once: true });
+
+window.addEventListener("DOMContentLoaded", async ()=>{
+    const engIntro = await fetch("https://biruk-ai.onrender.com/EngIntroText")
+    const intoText = await engIntro.json()
+    message = intoText.text;
+    console.log(message)
+    document.getElementById("greetingText").value = message;
+});
+</script>
+</body>
+</html>
