@@ -280,7 +280,7 @@ app.post("/saveEngIntro",(req,res)=>{
       return res.status(400).json({ error: "No text received" });
     }
   english_intro = text;
-  res.status(200).redirect("/english_speech")
+  res.status(200).redirect("/")
 })
 
 app.get("/EngIntroText",(req,res)=>{
