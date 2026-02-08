@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chat + Q&A Editor</title>
+<style>
+:root{
+  --bg:#0f0f0f;
+  --panel:#1a1a1a;
+  --panel2:#202020;
+  --text:#fff;
+  --accent:#10a37f;
+}
+*{box-sizing:border-box;font-family:Arial,sans-serif}
+body{margin:0;background:var(--bg);color:var(--text);height:100vh;display:flex}
+
+/* SIDEBAR */
+.sidebar{
+  width:260px;
+  background:var(--panel);
+  display:flex;
+  flex-direction:column;
+  transition:.3s;
+  z-index:10;
+  overflow-y:auto;
+}
+.sidebar.hidden{transform:translateX(-100%)}
+.sidebar button{
+  background:none;
+  border:none;
+  color:var(--text);
+  padding:12px 15px;
+  text-align:left;
+  cursor:pointer;
+}
+.sidebar button:hover{background:var(--panel2)}
+.sidebar h4{
+  margin:10px 15px 0;
+  font-size:14px;
+  color:#ccc;
+}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column}
+
+/* TOP BAR */
+.topbar{
+  height:50px;
+  background:var(--panel);
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:0 10px;
+}
+.topbar button{
+  background:none;
+  border:none;
+  color:var(--text);
+  font-size:20px;
+  cursor:pointer;
+}
+
+/* CHAT */
+.chat{
+  flex:1;
+  padding:15px;
+  overflow-y:auto;
+}
+.msg{
+  max-width:80%;
+  margin-bottom:12px;
+  padding:10px;
+  border-radius:10px;
+}
+.user{margin-left:auto;background:var(--accent)}
+.bot{background:var(--panel2)}
+
+/* SUGGESTIONS */
+.suggestions{
+  display:none;
+  flex-wrap:wrap;
+  gap:8px;
+  padding:8px 10px;
+  background:var(--panel2);
+}
+.suggestions span{
+  background:#2b2b2b;
+  padding:6px 10px;
+  border-radius:14px;
+  cursor:pointer;
+  font-size:13px;
+}
+.suggestions span:hover{background:var(--accent)}
+
+/* INPUT */
+.input-area{
+  display:flex;
+  gap:10px;
+  padding:10px;
+  background:var(--panel);
+}
+textarea{
+  flex:1;
+  height:45px;
+  resize:none;
+  padding:10px;
+  background:var(--panel2);
+  border:none;
+  border-radius:8px;
+  color:var(--text);
+}
+.send{
+  background:var(--accent);
+  border:none;
+  padding:0 18px;
+  border-radius:8px;
+  color:#fff;
+  cursor:pointer;
+}
+
+/* MOBILE */
+@media(max-width:768px){.sidebar{position:absolute;height:100%}}
+
+/* EDITOR */
+.editor{
+  position:fixed;
+  inset:0;
+  background:#000000ee;
+  display:none;
+  z-index:100;
+  overflow:auto;
+}
+.editor-box{
+  max-width:500px;
+  margin:30px auto;
+  background:var(--panel);
+  padding:20px;
+  border-radius:10px;
+}
+.editor input,
+.editor textarea,
+.editor select{
+  width:100%;
+  padding:10px;
+  margin:6px 0;
+  background:var(--panel2);
+  border:none;
+  color:var(--text);
+}
+.editor button{
+  width:100%;
+  padding:10px;
+  margin-top:6px;
+  border:none;
+  cursor:pointer;
+}
+.item{
+  background:var(--panel2);
+  padding:10px;
+  margin-top:10px;
+  border-radius:8px;
+}
+.delete{background:#c0392b;color:#fff}
+.edit{background:#16a085;color:#fff}
+.export{background:#2980b9;color:#fff}
+.import{background:#8e44ad;color:#fff}
+.close{background:#555;color:#fff}
+
+.chat-history-item{
+  padding:8px 12px;
+  cursor:pointer;
+  border-bottom:1px solid #1a1a1a;
+}
+.chat-history-item:hover{background:#222}
+.chat-history-item .delete-btn{
+  float:right;
+  color:#c0392b;
+  cursor:pointer;
+}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar hidden" id="sidebar">
+  <button onclick="newChat()">➕ New Chat</button>
+    <!-- UPDATED BUTTON LINKING TO HADVOICE.HTML -->
+  <button onclick="window.open('hadvoice.html','_blank')">🎤 Voice Chat</button>
+  <h4>Chat History</h4>
+  
+  <button onclick="openEditor()">✏️ Edit (Q&A)</button>
+  <h4>Chat History</h4>
+  
+  <div id="chatHistoryList"></div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <button id="hamburgerBtn">☰</button>
+  </div>
+  <div class="chat" id="chat"></div>
+  <div class="suggestions" id="suggestions"></div>
+  <div class="input-area">
+    <textarea id="input" placeholder="Ask Biruk Ai..."></textarea>
+    <button class="send" onclick="send()">Send</button>
+  </div>
+</div>
+
+<!-- EDITOR -->
+<div class="editor" id="editor">
+  <div class="editor-box" id="loginBox">
+    <h3>🔐 Editor Login</h3>
+    <input type="password" id="pass" placeholder="Password">
+    <button class="send" onclick="login()">Login</button>
+    <button class="close" onclick="closeEditor()">Close</button>
+  </div>
+  <div class="editor-box" id="editorBox" style="display:none">
+    <h3>✏️ Q&A Manager</h3>
+    <input id="searchQA" placeholder="🔍 Search Q&A..." oninput="renderQA()">
+    <input id="q" placeholder="Question">
+    <textarea id="a" placeholder="Answer"></textarea>
+    <select id="c">
+      <option>General</option>
+      <option>Greeting</option>
+      <option>Coding</option>
+      <option>Math</option>
+    </select>
+    <button class="send" onclick="addQA()">➕ Add / Update</button>
+    <button class="export" onclick="exportQA()">⬇ Export JSON</button>
+    <input type="file" id="file" hidden onchange="importQA(event)">
+    <button class="import" onclick="file.click()">⬆ Import JSON</button>
+    <div id="list"></div>
+    <button class="close" onclick="closeEditor()">Close</button>
+  </div>
+</div>
+
+<script>
+/* ================= DATA ================= */
+const PASSWORD="1234";
+let qaList = JSON.parse(localStorage.getItem("qaList")) || [
+  {q:"Hi",a:"Hello 👋",c:"Greeting"},
+  {q:"Hello",a:"Hi there!",c:"Greeting"},
+  {q:"What is AI?",a:"AI means Artificial Intelligence.",c:"General"}
+];
+localStorage.setItem("qaList",JSON.stringify(qaList));
+
+// Chat history save
+let chatHistoryAll = JSON.parse(localStorage.getItem("chatHistoryAll")) || [];
+let currentChat = chatHistoryAll.length>0 ? chatHistoryAll[chatHistoryAll.length-1] : [];
+
+// Elements
+const chat=document.getElementById("chat");
+const input=document.getElementById("input");
+const suggestions=document.getElementById("suggestions");
+const chatHistoryList=document.getElementById("chatHistoryList");
+const sidebar=document.getElementById("sidebar");
+const hamburgerBtn=document.getElementById("hamburgerBtn");
+
+// Sidebar toggle logic
+hamburgerBtn.addEventListener("click", e=>{
+  e.stopPropagation();
+  sidebar.classList.toggle("hidden");
+});
+document.addEventListener("click", e=>{
+  if(!sidebar.contains(e.target) && e.target!==hamburgerBtn){
+    sidebar.classList.add("hidden");
+  }
+});
+
+// New chat
+function newChat(){
+  currentChat=[];
+  chatHistoryAll.push(currentChat);
+  saveHistory();
+  renderChat();
+  renderHistorySidebar();
+}
+
+// Save chat history
+function saveHistory(){
+  localStorage.setItem("chatHistoryAll", JSON.stringify(chatHistoryAll));
+}
+
+// Render chat
+function renderChat(){
+  chat.innerHTML="";
+  if(currentChat.length===0) chat.innerHTML='<div class="msg bot">What can I help with?</div>';
+  currentChat.forEach((m)=>{
+    const div=document.createElement("div");
+    div.className="msg "+m.sender;
+    div.textContent=m.text;
+    chat.appendChild(div);
+  });
+  chat.scrollTop=chat.scrollHeight;
+}
+
+// Render chat history sidebar
+function renderHistorySidebar(){
+  chatHistoryList.innerHTML="";
+  chatHistoryAll.forEach((c,i)=>{
+    const div=document.createElement("div");
+    div.className="chat-history-item";
+    div.textContent=c.length>0 ? c[0].text.substring(0,20)+"..." : "New Chat";
+    const del=document.createElement("span");
+    del.textContent="✖";
+    del.className="delete-btn";
+    del.onclick=(e)=>{
+      e.stopPropagation();
+      if(confirm("Delete this chat?")){
+        chatHistoryAll.splice(i,1);
+        saveHistory();
+        renderHistorySidebar();
+        currentChat = chatHistoryAll[i] || [];
+        renderChat();
+      }
+    };
+    div.appendChild(del);
+    div.onclick=()=>{currentChat = chatHistoryAll[i]; renderChat();}
+    chatHistoryList.appendChild(div);
+  });
+}
+
+// Send function
+function send(){
+  const text=input.value.trim();
+  if(!text) return;
+  currentChat.push({sender:"user", text});
+  const found = qaList.find(x=>x.q.toLowerCase()===text.toLowerCase());
+  currentChat.push({sender:"bot", text: found ? found.a : "🤖 No Answer."});
+  saveHistory();
+  renderChat();
+  renderHistorySidebar();
+  input.value="";
+  suggestions.style.display="none";
+}
+
+// Autocomplete
+input.addEventListener("input",()=>{
+  const v=input.value.toLowerCase();
+  suggestions.innerHTML="";
+  if(!v){suggestions.style.display="none";return;}
+  qaList.filter(x=>x.q.toLowerCase().startsWith(v)).forEach(x=>{
+    const s=document.createElement("span");
+    s.textContent=x.q;
+    s.onclick=()=>{input.value=x.q;suggestions.style.display="none";}
+    suggestions.appendChild(s);
+  });
+  suggestions.style.display="flex";
+});
+
+/* ================= EDITOR ================= */
+const editor=document.getElementById("editor");
+const loginBox=document.getElementById("loginBox");
+const editorBox=document.getElementById("editorBox");
+const list=document.getElementById("list");
+
+function openEditor(){editor.style.display="block"}
+function closeEditor(){editor.style.display="none"}
+
+function login(){
+  if(document.getElementById("pass").value===PASSWORD){
+    loginBox.style.display="none";
+    editorBox.style.display="block";
+    renderQA();
+  }else alert("Wrong password");
+}
+
+function saveQA(){ localStorage.setItem("qaList", JSON.stringify(qaList)); renderQA(); }
+
+/* ================= ADD / EDIT / DELETE ================= */
+function addQA(){
+  const q=document.getElementById("q").value.trim();
+  const a=document.getElementById("a").value.trim();
+  const c=document.getElementById("c").value;
+  if(!q||!a)return;
+  const i=qaList.findIndex(x=>x.q===q);
+  if(i>-1) qaList[i]={q,a,c};
+  else qaList.push({q,a,c});
+  document.getElementById("q").value="";
+  document.getElementById("a").value="";
+  saveQA();
+}
+
+function editQA(i){
+  const x=qaList[i];
+  document.getElementById("q").value=x.q;
+  document.getElementById("a").value=x.a;
+  document.getElementById("c").value=x.c;
+}
+
+function delQA(i){
+  if(confirm("Delete this Q&A?")){
+    qaList.splice(i,1);
+    saveQA();
+  }
+}
+
+/* ================= RENDER QA LIST ================= */
+function renderQA(){
+  const s=document.getElementById("searchQA").value.toLowerCase();
+  list.innerHTML="";
+  qaList.forEach((x,i)=>{
+    if(!x.q.toLowerCase().includes(s) && !x.a.toLowerCase().includes(s)) return;
+    const d=document.createElement("div");
+    d.className="item";
+    d.innerHTML=`<b>[${x.c}]</b><br>Q: ${x.q}<br>A: ${x.a}
+      <button class="edit" onclick="editQA(${i})">Edit</button>
+      <button class="delete" onclick="delQA(${i})">Delete</button>`;
+    list.appendChild(d);
+  });
+}
+
+/* ================= IMPORT / EXPORT ================= */
+function exportQA(){
+  const blob=new Blob([JSON.stringify(qaList,null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="qa-backup.json";
+  a.click();
+}
+function importQA(e){
+  const r=new FileReader();
+  r.onload=()=>{qaList=JSON.parse(r.result); saveQA();}
+  r.readAsText(e.target.files[0]);
+}
+
+// Initial render
+renderChat();
+renderHistorySidebar();
+</script>
+</body>
+</html>
