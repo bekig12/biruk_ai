@@ -9,6 +9,7 @@ import { PassThrough } from "stream";
 const app = express();
 app.use(express.json());
 app.use(cors({ origin: "*" }));
+app.use(express.urlencoded({ extended: true }));
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -263,6 +264,74 @@ res.json({ans:amharic})
 console.error("ERROR:", err);
 return res.status(500).json({ error: err.message });
 }
+});
+//settings route
+let english_intro = `Hi, my name is Bruki Girma.
+    I am a 12th grade natural science student.
+    What can I help you with today?`
+
+app.post("/saveEngIntro",(req,res)=>{
+    const {text} = req.body
+  if (!text) {
+      return res.status(400).json({ error: "No text received" });
+    }
+  english_intro = text;
+  res.status(200).redirect("/english_speech")
+})
+
+app.get("/EngIntroText",(req,res)=>{
+  return res.json({text:english_intro})
+})
+
+
+app.post("/changeAudio", (req, res) => {
+  const form = formidable({
+    multiples: false,
+    keepExtensions: true
+  });
+
+
+  form.parse(req, async (err, fields, files) => {
+    if (err) {
+      console.error("Formidable error:", err);
+      return res.status(400).json({ error: "Upload failed" });
+    }
+    const AUDIO_DIR = path.join(process.cwd(), "assets");
+
+const AUDIO_NAME = fields.name;
+const AUDIO_PATH = path.join(AUDIO_DIR, AUDIO_NAME);
+// make sure folder exists
+fs.mkdirSync(AUDIO_DIR, { recursive: true });
+
+    const audioFile = files.audio;
+    if (!audioFile) {
+      return res.status(400).json({ error: "No audio received" });
+    }
+
+    const file = Array.isArray(audioFile) ? audioFile[0] : audioFile;
+
+    try {
+      // 🔥 1. Delete existing audio if it exists
+      if (fs.existsSync(AUDIO_PATH)) {
+        fs.unlinkSync(AUDIO_PATH);
+        console.log("Old audio deleted");
+      }
+
+      // 🔥 2. Move uploaded file to target folder + name
+      fs.renameSync(file.filepath, AUDIO_PATH);
+
+      console.log("New audio saved:", AUDIO_PATH);
+
+      res.json({
+        success: true,
+        filename: AUDIO_NAME
+      });
+
+    } catch (e) {
+      console.error("File handling error:", e);
+      res.status(500).json({ error: "File system error" });
+    }
+  });
 });
 
 // Render uses PORT env variable
