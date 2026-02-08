@@ -1,0 +1,134 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Accurate Speech to Text</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body { font-family: sans-serif; padding:20px; }
+    #mic { width:12px; height:12px; border-radius:50%; background:#ccc; display:inline-block; margin-right:8px; }
+    #mic.on { background:#10B981; }
+    #output { margin-top:20px; padding:12px; border:1px solid #ccc; min-height:80px; }
+  </style>
+</head>
+<body>
+
+<h2>Accurate Speech → Text</h2>
+
+<div>
+  <span id="mic"></span>
+  <button id="startBtn">Start Listening</button>
+  <button id="stopBtn">Stop</button>
+</div>
+
+<div id="output"></div>
+
+<script>
+let recognition;
+let listening = false;
+
+function createRecognizer() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    alert("Your browser does NOT support SpeechRecognition.");
+    return;
+  }
+
+  const r = new SR();
+  r.lang = "en-US";                 // set language here
+  r.continuous = true;              // best accuracy on mobile Chrome
+  r.interimResults = false;         // IMPORTANT → stable, accurate final results
+  r.maxAlternatives = 1;
+
+  r.onstart = () => {
+    listening = true;
+    document.getElementById("mic").classList.add("on");
+  };
+
+  r.onend = () => {
+    listening = false;
+    document.getElementById("mic").classList.remove("on");
+
+    // Auto-restart to keep listening (only when user didn't stop manually)
+    if (autoRestart) {
+      setTimeout(() => {
+        try { r.start(); } catch (e) {}
+      }, 300);
+    }
+  };
+
+  r.onerror = (e) => {
+    console.warn("Speech error:", e);
+    if (e.error === "not-allowed") {
+      alert("Microphone permission blocked. Enable microphone permission.");
+    }
+  };
+
+  r.onresult = (event) => {
+    const i = event.results.length - 1;
+    const text = event.results[i][0].transcript.trim();
+    document.getElementById("output").textContent = text;
+  };
+
+  return r;
+}
+
+let autoRestart = false;
+recognition = createRecognizer();
+
+document.getElementById("startBtn").onclick = async () => {
+  if (!recognition) recognition = createRecognizer();
+  
+  autoRestart = true;
+
+  try {
+    await navigator.mediaDevices.getUserMedia({ audio: true });
+    recognition.start();
+  } catch (err) {
+    alert("Microphone permission denied.");
+  }
+};
+
+document.getElementById("stopBtn").onclick = () => {
+  autoRestart = false;
+  if (recognition) recognition.stop();
+};
+
+
+
+
+
+
+
+
+
+
+
+
+const fetch = require("node-fetch");
+
+app.get("/stream-audio", async (req, res) => {
+  try {
+    const response = await fetch(result.url); // result.url is the audio URL
+
+    // Set appropriate headers (adjust Content-Type if needed)
+    res.setHeader("Content-Type", response.headers.get("content-type") || "audio/mpeg");
+    res.setHeader("Content-Length", response.headers.get("content-length") || 0);
+
+    // Pipe the fetched response body directly to the client
+    response.body.pipe(res);
+
+    response.body.on("error", (err) => {
+      console.error("Stream error:", err);
+      res.end();
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Failed to stream audio");
+  }
+});
+</script>
+
+</body>
+</html>
