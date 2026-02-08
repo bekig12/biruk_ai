@@ -324,8 +324,8 @@ fs.mkdirSync(AUDIO_DIR, { recursive: true });
       }
 
       // 🔥 2. Move uploaded file to target folder + name
-      fs.renameSync(file.filepath, AUDIO_PATH);
-
+      fs.copyFileSync(file.filepath, AUDIO_PATH);
+      fs.unlinkSync(file.filepath);
       console.log("New audio saved:", AUDIO_PATH);
 
       res.json({
