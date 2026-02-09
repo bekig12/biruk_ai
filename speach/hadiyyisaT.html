@@ -1,133 +1,280 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Accurate Speech to Text</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <style>
-    body { font-family: sans-serif; padding:20px; }
-    #mic { width:12px; height:12px; border-radius:50%; background:#ccc; display:inline-block; margin-right:8px; }
-    #mic.on { background:#10B981; }
-    #output { margin-top:20px; padding:12px; border:1px solid #ccc; min-height:80px; }
-  </style>
-</head>
-<body>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auto Listening & Speaking</title>
 
-<h2>Accurate Speech → Text</h2>
+<style>
+/* ===== MAIN PAGE STYLES ===== */
+html, body { margin:0; padding:0; font-family: Arial; height:100%; display:flex; flex-direction:column; background:#fff;}
+.top { width:100%; display:flex; justify-content:space-between; align-items:center; padding:6px 8px; background:#a3f2f7; box-sizing:border-box;}
+.title { font-size:14px; font-weight:bold; color:#000;}
+.controls { display:flex; gap:6px; }
+.theme-switch { padding:6px 12px; border-radius:20px; border:1px solid #000; background:#000; color:#fff; font-size:13px; cursor:pointer; }
+.hamburger { font-size:22px; cursor:pointer; width:38px; height:38px; display:flex; justify-content:center; align-items:center; border-radius:50%; background:#a3f2f7; color:#000;}
+.menu { display:none; position:absolute; top:48px; right:10px; background:#fff; border:1px solid #000; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.2); z-index:100;}
+.menu button { width:100%; padding:8px 12px; border:none; background:none; cursor:pointer; text-align:left;}
+.menu button:hover { background:#eee; }
+textarea { width:100%; flex:1; border:none; outline:none; resize:none; padding:16px; font-size:18px; line-height:1.6; box-sizing:border-box; background:#fff; color:#000;}
+.footer { background:#000; color:#fff; text-align:center; padding:5px; font-size:14px;}
+body.dark textarea { background:#000; color:#fff;}
+body.dark { background:#000;}
+body.dark .theme-switch { background:#fff; color:#000; border-color:#fff;}
+@media(max-width:600px){ textarea{font-size:16px;} .footer{font-size:12px;}}
 
-<div>
-  <span id="mic"></span>
-  <button id="startBtn">Start Listening</button>
-  <button id="stopBtn">Stop</button>
-</div>
-
-<div id="output"></div>
-
-<script>
-let recognition;
-let listening = false;
-
-function createRecognizer() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) {
-    alert("Your browser does NOT support SpeechRecognition.");
-    return;
-  }
-
-  const r = new SR();
-  r.lang = "en-US";                 // set language here
-  r.continuous = true;              // best accuracy on mobile Chrome
-  r.interimResults = false;         // IMPORTANT → stable, accurate final results
-  r.maxAlternatives = 1;
-
-  r.onstart = () => {
-    listening = true;
-    document.getElementById("mic").classList.add("on");
-  };
-
-  r.onend = () => {
-    listening = false;
-    document.getElementById("mic").classList.remove("on");
-
-    // Auto-restart to keep listening (only when user didn't stop manually)
-    if (autoRestart) {
-      setTimeout(() => {
-        try { r.start(); } catch (e) {}
-      }, 300);
-    }
-  };
-
-  r.onerror = (e) => {
-    console.warn("Speech error:", e);
-    if (e.error === "not-allowed") {
-      alert("Microphone permission blocked. Enable microphone permission.");
-    }
-  };
-
-  r.onresult = (event) => {
-    const i = event.results.length - 1;
-    const text = event.results[i][0].transcript.trim();
-    document.getElementById("output").textContent = text;
-  };
-
-  return r;
+/* ===== SETTINGS LOGIN MODAL ===== */
+#settingsModal {
+  display:none;
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background: rgba(0,0,0,0.6);
+  justify-content:center;
+  align-items:center;
+  z-index:200;
 }
 
-let autoRestart = false;
-recognition = createRecognizer();
+#loginContent {
+  background:#1e1e1e;
+  padding:25px 20px;
+  border-radius:12px;
+  width:90%;
+  max-width:350px;
+  text-align:center;
+  color:#fff;
+  box-shadow:0 10px 25px rgba(0,0,0,0.5);
+}
 
-document.getElementById("startBtn").onclick = async () => {
-  if (!recognition) recognition = createRecognizer();
-  
-  autoRestart = true;
+#loginContent h2 {
+  margin-top:0;
+  margin-bottom:15px;
+  font-size:20px;
+}
 
-  try {
-    await navigator.mediaDevices.getUserMedia({ audio: true });
-    recognition.start();
-  } catch (err) {
-    alert("Microphone permission denied.");
+#loginContent input[type="password"] {
+  width:100%;
+  padding:10px 12px;
+  margin-bottom:15px;
+  border-radius:8px;
+  border:none;
+  font-size:14px;
+}
+
+#loginContent button {
+  width:48%;
+  padding:10px 0;
+  margin:4px 1%;
+  border:none;
+  border-radius:8px;
+  font-size:14px;
+  cursor:pointer;
+  transition:all 0.2s ease;
+}
+
+#loginContent button:first-of-type {
+  background-color:#2ecc71;
+  color:#fff;
+}
+#loginContent button:first-of-type:hover { background-color:#27ae60; }
+
+#loginContent button:last-of-type {
+  background-color:#7f8c8d;
+  color:#fff;
+}
+#loginContent button:last-of-type:hover { background-color:#606060; }
+
+/* ===== EDITOR MODAL (after login) ===== */
+#editorContent {
+  display:none;
+  background:#f9f9f9;
+  padding:25px 20px;
+  border-radius:12px;
+  width:90%;
+  max-width:400px;
+  text-align:left;
+  box-shadow:0 8px 20px rgba(0,0,0,0.25);
+  position:relative;
+  color:#333;
+}
+
+#editorContent h2 { margin-top:0; font-size:20px; text-align:center; }
+#editorContent label { display:block; margin:12px 0 6px; font-weight:bold; }
+#editorContent input[type="text"], #editorContent input[type="file"] {
+  width:100%;
+  padding:8px 10px;
+  margin-bottom:12px;
+  border:1px solid #ccc;
+  border-radius:6px;
+  font-size:14px;
+  box-sizing:border-box;
+}
+
+#editorContent button {
+  padding:10px 16px;
+  margin-top:8px;
+  margin-right:6px;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+  font-size:14px;
+  transition:background 0.2s ease, transform 0.1s ease;
+}
+
+#editorContent button:first-of-type { background:#4CAF50; color:#fff; }
+#editorContent button:first-of-type:hover { background:#45a049; transform:translateY(-1px); }
+#editorContent button:last-of-type { background:#f44336; color:#fff; }
+#editorContent button:last-of-type:hover { background:#d73833; transform:translateY(-1px); }
+
+@media(max-width:480px){
+  #editorContent { padding:20px 15px; }
+  #editorContent h2 { font-size:18px; }
+  #editorContent button { width:48%; font-size:13px; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="top">
+  <span class="title">Ai powered management system</span>
+  <div class="controls">
+    <button class="theme-switch" onclick="toggleTheme()">Dark</button>
+    <span class="hamburger" onclick="toggleMenu()">☰</span>
+  </div>
+  <div class="menu" id="menu">
+    <button onclick="setLanguage('en-US')">Biruk</button>
+    <button onclick="setLanguage('am-ET')">ብሩክ</button>
+    <button onclick="openSettings()">Setting ⚙️</button>
+  </div>
+</div>
+
+<textarea id="output" placeholder="English voice recognition"></textarea>
+<div class="footer">© Developed By Innovator Biruk Girma 🇪🇹 2025</div>
+
+<!-- FULLSCREEN SETTINGS MODAL -->
+<div id="settingsModal">
+  <!-- LOGIN CONTENT -->
+  <div id="loginContent">
+    <h2>🔒 Editor Login</h2>
+    <input type="password" id="passwordInput" placeholder="Password">
+    <button onclick="checkPassword()">Login</button>
+    <button onclick="closeSettings()">Close</button>
+  </div>
+
+  <!-- EDITOR CONTENT -->
+  <div id="editorContent">
+    <h2>App Settings</h2>
+    <label>English Placeholder Text:</label>
+    <input type="text" id="englishPlaceholder" placeholder="English voice recognition">
+    <label>Amharic Placeholder Text:</label>
+    <input type="text" id="amharicPlaceholder" placeholder="አማርኛ ድምፅ">
+    <label>English Intro Audio:</label>
+    <input type="file" id="englishAudio" accept="audio/*">
+    <label>Amharic Intro Audio:</label>
+    <input type="file" id="amharicAudio" accept="audio/*">
+    <button onclick="saveSettings()">Save Settings</button>
+    <button onclick="closeSettings()">Cancel</button>
+  </div>
+</div>
+
+<script>
+/* MENU + THEME */
+const menu = document.getElementById("menu");
+function toggleMenu(){ menu.style.display=menu.style.display==="block"?"none":"block"; }
+function toggleTheme(){ document.body.classList.toggle("dark"); }
+
+/* SETTINGS MODAL LOGIC */
+const settingsModal = document.getElementById("settingsModal");
+const loginContent = document.getElementById("loginContent");
+const editorContent = document.getElementById("editorContent");
+
+function openSettings(){
+  settingsModal.style.display="flex";
+  loginContent.style.display="block";
+  editorContent.style.display="none";
+  document.getElementById("passwordInput").value="";
+}
+
+function checkPassword(){
+  const pwd = document.getElementById("passwordInput").value;
+  if(pwd==="1234"){ // Change your password here
+    loginContent.style.display="none";
+    editorContent.style.display="block";
+
+    // Load current settings
+    const en = localStorage.getItem("placeholder_en");
+    const am = localStorage.getItem("placeholder_am");
+    if(en) document.getElementById("englishPlaceholder").value = en;
+    if(am) document.getElementById("amharicPlaceholder").value = am;
+  } else {
+    alert("Incorrect password!");
+  }
+}
+
+function closeSettings(){
+  settingsModal.style.display="none";
+}
+
+/* SAVE SETTINGS */
+function saveSettings(){
+  const enText = document.getElementById("englishPlaceholder").value;
+  const amText = document.getElementById("amharicPlaceholder").value;
+  if(enText) localStorage.setItem("placeholder_en", enText);
+  if(amText) localStorage.setItem("placeholder_am", amText);
+
+  const enAudio = document.getElementById("englishAudio").files[0];
+  const amAudio = document.getElementById("amharicAudio").files[0];
+  if(enAudio) localStorage.setItem("audio_en", URL.createObjectURL(enAudio));
+  if(amAudio) localStorage.setItem("audio_am", URL.createObjectURL(amAudio));
+
+  alert("Settings saved! They will apply immediately.");
+  closeSettings();
+  setLanguage(currentLang);
+}
+
+/* SPEECH RECOGNITION */
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const recognition = new SpeechRecognition();
+recognition.continuous=true;
+recognition.interimResults=true;
+
+const output = document.getElementById("output");
+let lastFinalText="";
+let allowRestart=false;
+let currentLang="en-US";
+let audio=null;
+
+function playIntroAudio(lang){
+  if(audio) audio.pause();
+  const storedAudio = localStorage.getItem(lang==="am-ET"?"audio_am":"audio_en");
+  const src = storedAudio || (lang==="am-ET"?"/assets/bbbc.mp3":"/assets/AAA.mp3");
+  audio = new Audio(src);
+  audio.autoplay=true; audio.loop=false;
+  recognition.stop(); allowRestart=false;
+  audio.play().catch(()=>{ document.body.addEventListener("click",()=>audio.play(),{once:true}); });
+  audio.onended = ()=>{ allowRestart=true; recognition.lang=lang; recognition.start(); };
+}
+
+function setLanguage(lang){
+  currentLang=lang;
+  const customPlaceholder = localStorage.getItem(lang==="om-ET"?"placeholder_en":"placeholder_am");
+  output.placeholder = customPlaceholder || (lang==="am-ET"?"አማርኛ ድምፅ":"English voice recognition");
+  playIntroAudio(lang);
+  menu.style.display="none";
+}
+
+recognition.onresult = e=>{
+  for(let i=e.resultIndex;i<e.results.length;i++){
+    if(e.results[i].isFinal){
+      const text=e.results[i][0].transcript.trim();
+      if(text!==lastFinalText){ output.value+=text+" "; lastFinalText=text; }
+    }
   }
 };
+recognition.onend = ()=>{ if(allowRestart) recognition.start(); };
 
-document.getElementById("stopBtn").onclick = () => {
-  autoRestart = false;
-  if (recognition) recognition.stop();
-};
-
-
-
-
-
-
-
-
-
-
-
-
-const fetch = require("node-fetch");
-
-app.get("/stream-audio", async (req, res) => {
-  try {
-    const response = await fetch(result.url); // result.url is the audio URL
-
-    // Set appropriate headers (adjust Content-Type if needed)
-    res.setHeader("Content-Type", response.headers.get("content-type") || "audio/mpeg");
-    res.setHeader("Content-Length", response.headers.get("content-length") || 0);
-
-    // Pipe the fetched response body directly to the client
-    response.body.pipe(res);
-
-    response.body.on("error", (err) => {
-      console.error("Stream error:", err);
-      res.end();
-    });
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Failed to stream audio");
-  }
-});
+window.addEventListener("DOMContentLoaded",()=>{ setLanguage(currentLang); });
 </script>
 
 </body>
