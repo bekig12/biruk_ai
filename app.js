@@ -32,8 +32,17 @@ res.sendFile(path.join(__dirname, "speach/amharic.html"));
 app.get("/english", (req, res) => {
 res.sendFile(path.join(__dirname, "speach/english.html"));
 });
-app.get("/text", (req, res) => {
-res.sendFile(path.join(__dirname, "speach/text.html"));
+app.get("/amharicTxt", (req, res) => {
+res.sendFile(path.join(__dirname, "speach/amharic_txt.html"));
+});
+app.get("/englishTxt", (req, res) => {
+res.sendFile(path.join(__dirname, "speach/english_txt.html"));
+});
+app.get("/haddiyisaT", (req, res) => {
+res.sendFile(path.join(__dirname, "speach/hadiyyisaT.html"));
+});
+app.get("/haddiyisa", (req, res) => {
+res.sendFile(path.join(__dirname, "speach/hadiyyisaC.html"));
 });
 
 const CAMB_API_KEY = process.env.CAMB_API_KEY
