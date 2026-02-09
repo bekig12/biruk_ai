@@ -337,10 +337,7 @@ fs.mkdirSync(AUDIO_DIR, { recursive: true });
       fs.unlinkSync(file.filepath);
       console.log("New audio saved:", AUDIO_PATH);
 
-      res.json({
-        success: true,
-        filename: AUDIO_NAME
-      });
+      res.redirect("/");
 
     } catch (e) {
       console.error("File handling error:", e);
