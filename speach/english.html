@@ -82,7 +82,7 @@
     <div class="lg:col-span-2 space-y-6">
 
       <!-- Core Greeting Message -->
-      <form action="https://birukai.onrender.com/saveEngIntro" method="POST" id="greetingForm" class="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-sm">
+      <form action="https://biruk-ai.onrender.com/saveEngIntro" method="POST" id="greetingForm" class="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-sm">
         <label class="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">Core Greeting Message</label>
         <textarea name="text" id="greetingText" class="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 focus:border-blue-600 outline-none min-h-[160px] font-mono text-sm text-blue-100 leading-relaxed" placeholder="Initialize system greeting..."></textarea>
         <button type="submit" class="mt-4 px-6 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg font-bold cursor-pointer">
@@ -107,7 +107,7 @@
         </form>
 
         <!-- Voice Data -->
-        <form action="https://birukai.onrender.com/changeAudio" method="POST" enctype="multipart/form-data" id="voiceForm" class="bg-slate-900 p-5 rounded-2xl border border-slate-800 text-center">
+        <form action="https://biruk-ai.onrender.com/changeAudio" method="POST" enctype="multipart/form-data" id="voiceForm" class="bg-slate-900 p-5 rounded-2xl border border-slate-800 text-center">
           <i class="fas fa-waveform text-purple-500 mb-3 text-xl"></i>
           <p class="text-[10px] font-bold text-slate-400 uppercase mb-4">Voice Data</p>
           <label class="block w-full py-2 bg-slate-800 hover:bg-purple-900/30 border border-slate-700 rounded-lg cursor-pointer text-xs font-bold transition-all">
@@ -300,7 +300,7 @@ function startSystem() {
         isSpeaking = true;
 
         try {
-            const aiAnswer = await fetch("https://birukai.onrender.com/askEnglish", {
+            const aiAnswer = await fetch("https://biruk-ai.onrender.com/askEnglish", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ question: text })
@@ -343,7 +343,7 @@ document.body.addEventListener("click", () => {
 }, { once: true });
 
 window.addEventListener("DOMContentLoaded", async ()=>{
-    const engIntro = await fetch("https://birukai.onrender.com/EngIntroText")
+    const engIntro = await fetch("https://biruk-ai.onrender.com/EngIntroText")
     const intoText = await engIntro.json()
     message = intoText.text;
     console.log(message)
