@@ -76,7 +76,7 @@ app.post("/askEnglish", async (req, res) => {
     // Extract the actual text answer
     const answer = data?.choices?.[0]?.message?.content || "No response from AI";
 
-    res.json({ answer });
+    res.json({ answer,data });
 
   } catch (error) {
     console.error("Error:", error);
