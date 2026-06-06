@@ -308,7 +308,7 @@ function startSystem() {
             const answer = await aiAnswer.json();
             video.play();
             setTimeout(()=> speakText(answer.answer), 300);
-            console.log("AI:", answer.answer);
+            console.log("AI:", answer);
         } catch (err) {
             console.log("Error fetching AI:", err);
         }
